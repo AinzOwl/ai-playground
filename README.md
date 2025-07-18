@@ -6,8 +6,6 @@ A versatile, browser-based interface designed for developers and AI enthusiasts 
 
 *Your data, including API keys and workspaces, is stored securely and privately in your browser's local storage.*
 
-![Ainz AI Playground Screenshot](https://i.imgur.com/uR1jW82.png)
-*(Note: You can replace this with your own screenshot)*
 
 ---
 
