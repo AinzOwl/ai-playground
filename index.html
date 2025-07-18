@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Playground</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <style>
+        /* Custom scrollbar for webkit browsers */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #1f2937; /* dark:bg-gray-800 */
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #4b5563; /* dark:bg-gray-600 */
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #6b7280; /* dark:bg-gray-500 */
+        }
+        .sortable-ghost {
+            opacity: 0.4;
+            background: #4a5568;
+        }
+        #code-snippet-bar .resizer {
+            cursor: ns-resize;
+            height: 8px;
+            background-color: #111827; /* bg-gray-900 */
+        }
+        #code-snippet-bar pre {
+            max-height: 25vh;
+        }
+    </style>
+</head>
+<body class="bg-gray-900 text-gray-300 font-sans">
+    <!-- Main container -->
+    <div id="app" class="flex flex-col h-screen">
+        <!-- Header -->
+        <header class="flex items-center justify-between p-4 border-b border-gray-700 flex-shrink-0">
+            <div class="flex items-center space-x-8">
+                <h1 class="text-xl font-bold text-white">Ainz AI Playground</h1>
+            </div>
+            <div class="flex items-center space-x-4">
+                 <button id="workspace-manager-btn" class="p-2 rounded-full bg-gray-700 hover:bg-gray-600" title="Manage Workspaces">
+                    <svg class="w-5 h-5 text-gray-300" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12a7.5 7.5 0 0015 0m-15 0a7.5 7.5 0 1115 0m-15 0H3m18 0h-1.5m-15.75 0a7.5 7.5 0 0115 0m-15 0a7.5 7.5 0 0015 0m-16.5 0h1.5m13.5 0h1.5m-12 0c0 3.182 2.688 5.75 6 5.75s6-2.568 6-5.75m-12 0c0-3.182 2.688-5.75 6-5.75s6 2.568 6 5.75" />
+                    </svg>
+                 </button>
+            </div>
+        </header>
+
+        <!-- Main content -->
+        <main class="flex-grow grid grid-cols-1 md:grid-cols-12 gap-4 p-4 overflow-hidden">
+            <!-- Left Panel: Conversation Chain -->
+            <div class="col-span-1 md:col-span-4 flex flex-col space-y-4 min-h-0">
+                <!-- System Prompt -->
+                <div class="flex flex-col flex-shrink-0">
+                    <div class="flex justify-between items-center mb-2">
+                        <label for="system-prompt" class="text-sm font-semibold">SYSTEM</label>
+                        <button id="toggle-system-prompt-btn" class="p-1 hover:bg-gray-700 rounded-md" title="Toggle System Prompt">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                        </button>
+                    </div>
+                    <textarea id="system-prompt" class="w-full h-32 bg-gray-800 border border-gray-700 rounded-lg p-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"></textarea>
+                </div>
+                <!-- Dynamic Messages -->
+                <div id="messages-container" class="flex-grow flex flex-col space-y-4 overflow-y-auto pr-2">
+                    <!-- Messages will be added here dynamically -->
+                </div>
+                <button id="add-message-btn" class="flex-shrink-0 w-full bg-gray-600 hover:bg-gray-500 text-white font-semibold py-2 px-4 rounded-md text-sm mt-auto">
+                    Add Message
+                </button>
+            </div>
+
+            <!-- Middle Panel: Response -->
+            <div class="col-span-1 md:col-span-5 flex flex-col min-h-0">
+                <div class="flex justify-between items-center mb-2 flex-shrink-0">
+                    <h2 class="text-sm font-semibold">RESPONSE</h2>
+                     <select id="model-selector-dropdown" class="bg-gray-700 text-white px-3 py-1 rounded-md text-sm">
+                        <!-- Models populated here -->
+                    </select>
+                </div>
+                <div id="response-container" class="w-full flex-grow bg-gray-800 border border-gray-700 rounded-lg p-4 relative overflow-y-auto">
+                    <div id="response-content-container" class="text-sm whitespace-pre-wrap"></div>
+                    <div class="absolute top-2 right-2 flex space-x-2">
+                        <button id="show-code-btn" title="Show code" class="p-1.5 bg-gray-700 rounded-md hover:bg-gray-600">
+                             <svg class="w-5 h-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M17.25 6.75L22.5 12l-5.25 5.25m-10.5 0L1.5 12l5.25-5.25m7.5-3l-4.5 12" />
+                            </svg>
+                        </button>
+                        <button id="add-response-to-convo-btn" title="Add to conversation" class="p-1.5 bg-gray-700 rounded-md hover:bg-gray-600">
+                           <svg class="w-5 h-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm.75-11.25a.75.75 0 00-1.5 0v2.5h-2.5a.75.75 0 000 1.5h2.5v2.5a.75.75 0 001.5 0v-2.5h2.5a.75.75 0 000-1.5h-2.5v-2.5z" clip-rule="evenodd" /></svg>
+                       </button>
+                       <button id="copy-response-btn" class="p-1.5 bg-gray-700 rounded-md hover:bg-gray-600" title="Copy response">
+                           <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+                       </button>
+                    </div>
+                </div>
+                <div class="flex items-center justify-between mt-2 text-xs text-gray-400 flex-shrink-0">
+                    <div>Latency: <span id="latency">N/A</span></div>
+                    <div>Tokens/s: <span id="tokens-per-second">N/A</span></div>
+                </div>
+            </div>
+
+            <!-- Right Panel: Parameters -->
+            <div class="col-span-1 md:col-span-3 flex flex-col space-y-4 bg-gray-800 p-4 rounded-lg border border-gray-700 overflow-y-auto">
+                <div class="flex justify-between items-center flex-shrink-0">
+                    <h2 class="text-sm font-semibold">PARAMETERS</h2>
+                    <button id="manage-params-btn" class="text-sm text-blue-400 hover:text-blue-300">Manage</button>
+                </div>
+                <!-- Temperature -->
+                <div>
+                    <div class="flex justify-between items-center text-sm">
+                        <label for="temperature">Temperature</label>
+                        <span id="temperature-value">1</span>
+                    </div>
+                    <input id="temperature" type="range" min="0" max="2" step="0.01" value="1" class="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer">
+                </div>
+                 <!-- Top P -->
+                <div>
+                    <div class="flex justify-between items-center text-sm">
+                        <label for="top-p">Top P</label>
+                        <span id="top-p-value">1</span>
+                    </div>
+                    <input id="top-p" type="range" min="0" max="1" step="0.01" value="1" class="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer">
+                </div>
+                <!-- Max Tokens -->
+                <div>
+                    <div class="flex justify-between items-center text-sm">
+                        <label for="max-tokens">Max Tokens</label>
+                    </div>
+                    <input id="max-tokens" type="number" value="1024" class="w-full bg-gray-700 border border-gray-600 rounded-md p-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                </div>
+                <!-- Stream -->
+                <div class="flex justify-between items-center text-sm">
+                    <label for="stream">Stream</label>
+                    <label class="relative inline-flex items-center cursor-pointer">
+                        <input type="checkbox" id="stream" class="sr-only peer" checked>
+                        <div class="w-11 h-6 bg-gray-600 rounded-full peer peer-focus:ring-4 peer-focus:ring-blue-800 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                    </label>
+                </div>
+                
+                <div class="border-t border-gray-700 my-4"></div>
+
+                <!-- Custom Parameters -->
+                <div id="custom-params-container" class="space-y-4">
+                    <!-- Custom params will be injected here -->
+                </div>
+
+                <div class="flex-grow"></div>
+            </div>
+        </main>
+        
+        <!-- Code Snippet Bar -->
+        <div id="code-snippet-bar" class="hidden flex-col bg-gray-800 border-t-2 border-gray-700 flex-shrink-0">
+            <div class="resizer" id="code-bar-resizer"></div>
+            <header class="flex justify-between items-center p-2 bg-gray-900 flex-shrink-0">
+                <div class="flex items-center space-x-2">
+                    <label for="language-selector" class="text-sm font-semibold">Language:</label>
+                    <select id="language-selector" class="bg-gray-700 text-white px-3 py-1 rounded-md text-sm">
+                        <option value="bash">cURL</option>
+                        <option value="javascript">JavaScript (Fetch)</option>
+                    </select>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <button id="copy-code-btn" class="text-sm px-3 py-1 bg-gray-600 hover:bg-gray-500 rounded-md">Copy</button>
+                    <button id="close-code-bar-btn" class="p-1 hover:bg-gray-700 rounded-md">
+                        <svg class="w-5 h-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+                </div>
+            </header>
+            <pre class="overflow-auto flex-grow"><code id="code-snippet-content" class="text-sm"></code></pre>
+        </div>
+
+        <!-- Footer / Actions -->
+        <footer class="flex items-center justify-end p-4 border-t border-gray-700 flex-shrink-0">
+            <div class="flex items-center space-x-2">
+                <button id="clear-btn" class="px-4 py-2 text-sm rounded-md hover:bg-gray-700">Clear</button>
+                <button id="stop-btn" class="hidden bg-yellow-500 hover:bg-yellow-600 text-white font-semibold px-6 py-2 rounded-md text-sm">Stop</button>
+                <button id="submit-btn" class="bg-red-500 hover:bg-red-600 text-white font-semibold px-6 py-2 rounded-md text-sm">Submit</button>
+            </div>
+        </footer>
+    </div>
+    
+    <!-- Parameter Management Modal -->
+    <div id="manage-params-modal" class="fixed inset-0 bg-black bg-opacity-75 hidden items-center justify-center z-50">
+        <div class="bg-gray-800 rounded-lg shadow-xl w-full max-w-4xl text-gray-300 border border-gray-700 flex flex-col max-h-[90vh]">
+            <header class="p-4 border-b border-gray-700 flex-shrink-0">
+                 <h2 class="text-xl font-bold text-white">Manage Parameters</h2>
+            </header>
+            
+            <main class="flex-grow p-6 grid grid-cols-1 md:grid-cols-2 gap-6 overflow-y-auto">
+                <!-- Left: Parameter List -->
+                <div class="flex flex-col">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="font-semibold">Current Parameters</h3>
+                        <button id="reset-params-btn" class="text-sm text-red-400 hover:text-red-300">Reset All to Default</button>
+                    </div>
+                    <div id="param-list-container" class="space-y-2 flex-grow overflow-y-auto bg-gray-900 p-2 rounded-md border border-gray-600">
+                        <!-- Parameter list will be rendered here -->
+                    </div>
+                </div>
+
+                <!-- Right: Add/Edit Form -->
+                <div>
+                    <h3 id="param-form-title" class="font-semibold mb-4">Add New Parameter</h3>
+                     <div class="space-y-4">
+                        <input type="hidden" id="param-edit-key">
+                        <div>
+                            <label for="param-key" class="block text-sm font-medium mb-1">Parameter Key</label>
+                            <input type="text" id="param-key" class="w-full bg-gray-700 border border-gray-600 rounded-md p-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="e.g., presence_penalty">
+                        </div>
+                        <div>
+                            <label for="param-type" class="block text-sm font-medium mb-1">Type</label>
+                            <select id="param-type" class="w-full bg-gray-700 border border-gray-600 rounded-md p-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                <option value="number">Number (Slider)</option>
+                                <option value="string">String (Text Input)</option>
+                                <option value="boolean">Boolean (Toggle)</option>
+                                <option value="number_input">Number (Raw Input)</option>
+                            </select>
+                        </div>
+
+                        <!-- Fields for Number (Slider) -->
+                        <div id="param-number-slider-fields" class="space-y-4">
+                            <div class="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label for="param-min" class="block text-sm font-medium mb-1">Min Value</label>
+                                    <input type="number" id="param-min" value="0" class="w-full bg-gray-700 border border-gray-600 rounded-md p-2 text-sm">
+                                </div>
+                                <div>
+                                    <label for="param-max" class="block text-sm font-medium mb-1">Max Value</label>
+                                    <input type="number" id="param-max" value="1" class="w-full bg-gray-700 border border-gray-600 rounded-md p-2 text-sm">
+                                </div>
+                            </div>
+                             <div>
+                                <label for="param-step" class="block text-sm font-medium mb-1">Step</label>
+                                <input type="number" id="param-step" value="0.1" class="w-full bg-gray-700 border border-gray-600 rounded-md p-2 text-sm">
+                            </div>
+                        </div>
+
+                        <div>
+                            <label for="param-default-value" class="block text-sm font-medium mb-1">Default Value</label>
+                            <input type="text" id="param-default-value" class="w-full bg-gray-700 border border-gray-600 rounded-md p-2 text-sm" placeholder="e.g., 0.5">
+                        </div>
+                    </div>
+                </div>
+            </main>
+
+            <footer class="p-4 border-t border-gray-700 flex justify-between items-center flex-shrink-0">
+                <button id="show-add-param-form-btn" class="text-sm text-blue-400 hover:text-blue-300"> + Add New Parameter</button>
+                <div class="flex space-x-3">
+                    <button id="close-manage-params-modal-btn" class="px-4 py-2 text-sm rounded-md bg-gray-600 hover:bg-gray-500">Close</button>
+                    <button id="save-param-btn" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-4 py-2 rounded-md text-sm">Save Parameter</button>
+                </div>
+            </footer>
+        </div>
+    </div>
+
+    <!-- Main Management Modal -->
+    <div id="workspace-modal" class="fixed inset-0 bg-black bg-opacity-75 hidden items-center justify-center z-50">
+        <div class="bg-gray-800 rounded-lg shadow-xl w-full max-w-6xl text-gray-300 border border-gray-700 flex max-h-[90vh]">
+            <!-- Sidebar -->
+            <aside class="w-1/4 bg-gray-900 p-4 border-r border-gray-700 flex flex-col">
+                <h2 class="text-lg font-bold text-white mb-6">Management</h2>
+                <nav class="space-y-2">
+                    <button data-tab="workspaces" class="management-tab-btn w-full text-left px-3 py-2 rounded-md text-sm font-medium bg-gray-700 text-white">Workspaces</button>
+                    <button data-tab="apis" class="management-tab-btn w-full text-left px-3 py-2 rounded-md text-sm font-medium text-gray-400 hover:bg-gray-700 hover:text-white">APIs</button>
+                    <button data-tab="models" class="management-tab-btn w-full text-left px-3 py-2 rounded-md text-sm font-medium text-gray-400 hover:bg-gray-700 hover:text-white">Models</button>
+                    <button data-tab="backup" class="management-tab-btn w-full text-left px-3 py-2 rounded-md text-sm font-medium text-gray-400 hover:bg-gray-700 hover:text-white">Backup & Restore</button>
+                </nav>
+            </aside>
+
+            <!-- Main Content -->
+            <main class="w-3/4 flex flex-col">
+                <!-- Workspaces Tab -->
+                <div data-tab-content="workspaces" class="management-tab-content p-6 flex-grow overflow-y-auto">
+                    <h3 class="text-xl font-semibold mb-4 text-white">Save & Load Workspaces</h3>
+                    <div class="bg-gray-700 p-4 rounded-lg mb-6 border border-gray-600">
+                        <label for="workspace-name" class="block text-sm font-medium mb-2">Workspace Name</label>
+                        <div class="flex space-x-2">
+                            <input type="text" id="workspace-name" class="w-full bg-gray-800 border border-gray-600 rounded-md p-2 text-sm" placeholder="e.g., Creative Writing Session">
+                            <button id="save-workspace-btn" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-4 py-2 rounded-md text-sm whitespace-nowrap">Save Current</button>
+                        </div>
+                    </div>
+                    <h4 class="font-semibold mb-2">Saved Workspaces</h4>
+                    <div id="workspace-list-container" class="space-y-2">
+                        <!-- Saved workspaces will be listed here -->
+                    </div>
+                </div>
+
+                <!-- APIs Tab -->
+                <div data-tab-content="apis" class="management-tab-content p-6 grid grid-cols-2 gap-6 flex-grow overflow-y-auto hidden">
+                     <!-- Left: API List -->
+                    <div id="api-list-container" class="flex flex-col space-y-2 pr-2 border-r border-gray-700">
+                        <!-- API list rendered here -->
+                    </div>
+                    <!-- Right: Add/Edit Form -->
+                    <div id="api-form-container">
+                        <h3 id="api-form-title" class="font-semibold mb-4 text-white">Add API</h3>
+                        <div class="space-y-4">
+                             <input type="hidden" id="api-edit-id">
+                            <div>
+                                <label for="api-name" class="block text-sm font-medium mb-1">Name</label>
+                                <input type="text" id="api-name" class="w-full bg-gray-700 border border-gray-600 rounded-md p-2 text-sm" placeholder="e.g., My OpenAI Key">
+                            </div>
+                            <div>
+                                <label for="api-base-url" class="block text-sm font-medium mb-1">Base URL</label>
+                                <input type="text" id="api-base-url" class="w-full bg-gray-700 border border-gray-600 rounded-md p-2 text-sm" placeholder="https://api.openai.com/v1">
+                            </div>
+                            <div>
+                                <label for="api-key" class="block text-sm font-medium mb-1">API Key</label>
+                                <input type="password" id="api-key" class="w-full bg-gray-700 border border-gray-600 rounded-md p-2 text-sm" placeholder="sk-...">
+                            </div>
+                            <button id="fetch-models-btn" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-2 rounded-md text-sm">Fetch & Activate Models</button>
+                        </div>
+                        <div id="api-models-container" class="mt-4 hidden">
+                            <h4 class="font-semibold mb-2 text-white">Available Models</h4>
+                            <input type="search" id="model-search-input" class="w-full bg-gray-700 border border-gray-600 rounded-md p-2 mb-2 text-sm" placeholder="Search models...">
+                            <div id="api-models-list" class="max-h-60 overflow-y-auto space-y-1 p-2 bg-gray-900 rounded-md">
+                                <!-- Fetched models here -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Models Tab -->
+                <div data-tab-content="models" class="management-tab-content p-6 flex-grow overflow-y-auto hidden">
+                    <h3 class="text-xl font-semibold mb-4 text-white">Configure & Order Models</h3>
+                    <p class="text-sm text-gray-400 mb-4">Click and drag models to reorder them in the main dropdown. Use the toggle to enable or disable them.</p>
+                    <div id="model-config-list-container" class="space-y-2">
+                        <!-- Activated models config list here -->
+                    </div>
+                </div>
+
+                <!-- Backup & Restore Tab -->
+                <div data-tab-content="backup" class="management-tab-content p-6 flex-grow overflow-y-auto hidden">
+                     <h3 class="text-xl font-semibold mb-4 text-white">Backup & Restore</h3>
+                     <div class="space-y-6">
+                        <div class="bg-gray-700 p-4 rounded-lg border border-gray-600">
+                            <h4 class="font-semibold mb-2">Download All Data</h4>
+                            <div class="flex justify-between items-center mb-3">
+                                <p class="text-sm text-gray-400">Save a single JSON file containing all your workspaces.</p>
+                                <div class="flex items-center space-x-2 text-sm">
+                                    <label for="include-apis-toggle">Include APIs</label>
+                                    <label class="relative inline-flex items-center cursor-pointer">
+                                        <input type="checkbox" id="include-apis-toggle" class="sr-only peer">
+                                        <div class="w-11 h-6 bg-gray-600 rounded-full peer peer-focus:ring-4 peer-focus:ring-blue-800 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                                    </label>
+                                </div>
+                            </div>
+                            <button id="download-backup-btn" class="bg-green-600 hover:bg-green-700 text-white font-semibold px-4 py-2 rounded-md text-sm">Download Backup</button>
+                        </div>
+                         <div class="bg-gray-700 p-4 rounded-lg border border-gray-600">
+                            <h4 class="font-semibold mb-2">Restore from Backup</h4>
+                            <p class="text-sm text-gray-400 mb-3">Load data from a previously downloaded backup file. <strong class="text-yellow-400">This will overwrite any currently saved data.</strong></p>
+                            <input type="file" id="import-backup-input" class="hidden">
+                            <button id="import-backup-btn" class="bg-yellow-500 hover:bg-yellow-600 text-white font-semibold px-4 py-2 rounded-md text-sm">Import from File</button>
+                        </div>
+                     </div>
+                </div>
+                
+                <footer class="p-4 border-t border-gray-700 flex justify-end flex-shrink-0">
+                    <button id="close-workspace-modal-btn" class="px-4 py-2 text-sm rounded-md bg-gray-600 hover:bg-gray-500">Close</button>
+                </footer>
+            </main>
+        </div>
+    </div>
+
+    <script src="playground.js"></script>
+</body>
+</html> 
